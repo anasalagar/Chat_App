@@ -1,0 +1,33 @@
+version: 0.2
+env:
+  shell: bash
+  variables:
+    #### below variables are defined in AWS codebuild service
+    ### REPOSITORY_URI is nothing but ECR Repository uri, SERVICE is nothing but application name, ENV is nothing but type of environment 
+     REPOSITORY_URI: $REPOSITORY_URI
+     SERVICE: $SERVICE
+     ENV: $ENV  
+phases:
+  pre_build:
+    commands:
+      #### Below AWS command is using for login into AWS ECR service      
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $REPOSITORY_URI
+  build:
+    commands:
+      ### building docker image
+      - docker build -t $REPOSITORY_URI/$SERVICE:$ENV-$CODEBUILD_BUILD_NUMBER .
+      - docker tag $REPOSITORY_URI/$SERVICE:$ENV-$CODEBUILD_BUILD_NUMBER $REPOSITORY_URI/$SERVICE:$ENV-latest
+      ### Updating imagedefinitions.json Script, imagedefinitions.json file using for deploying updated docker image to AWS ECS service
+      - echo updating imagedefinitions.json Script using sed command
+      - sed -i s/ENV/$ENV/g imagedefinitions.json
+      - sed -i s/SERVICE/$SERVICE/g imagedefinitions.json
+      - sed -i s/REPOSITORY_URI/$REPOSITORY_URI/g imagedefinitions.json
+      - sed -i s/CODEBUILD_BUILD_NUMBER/$CODEBUILD_BUILD_NUMBER/g imagedefinitions.json     
+  post_build:
+    commands:
+      ### pushing docker images to AWS ECR 
+      - docker push $REPOSITORY_URI/$SERVICE:$ENV-$CODEBUILD_BUILD_NUMBER
+      - docker push $REPOSITORY_URI/$SERVICE:$ENV-latest
+artifacts:
+  files:
+    - '**.*'

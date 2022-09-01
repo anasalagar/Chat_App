@@ -1,0 +1,15 @@
+ 
+[
+  {
+    "name": "ENV-SERVICE",
+    "imageUri": "REPOSITORY_URI/SERVICE:ENV-CODEBUILD_BUILD_NUMBER"
+  }
+] 
+
+
+
+version: 0.2
+phases:
+  post_build:
+    commands:
+      - aws cloudfront create-invalidation --distribution-id $DISTRIBUTION_ID --paths "/*"
